@@ -5,7 +5,7 @@ use warnings;
 
 use HTTP::Engine;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 our %p;
 
 $p{e} = sub {
@@ -41,7 +41,7 @@ $p{init_cc} = sub {
 
 sub http_engine {
   my ($app, %options) = @_;
-  $options{request_handler} = sub {
+  $options{interface}{request_handler} = sub {
     my ($req)   = @_;
     my ($c, $p) = &{ $app . "::D" }($req->uri->path);
     my $cc      = $p{init_cc}($c, $req);
@@ -53,7 +53,7 @@ sub http_engine {
       body    => $content,
     );
   };
-  HTTP::Engine->new(interface => \%options);
+  HTTP::Engine->new(%options);
 }
 
 1;
@@ -69,6 +69,10 @@ Squatting::On::HTTP::Engine - run Squatting apps on top of HTTP::Engine
 Squatting on top of HTTP::Engine::Interface::ServerSimple
 
   # app_server_simple.pl
+
+  #!/usr/bin/perl
+  use strict;
+  use warnings;
   use App 'On::HTTP::Engine';
   App->init;
   App->http_engine(
@@ -82,17 +86,26 @@ Squatting on top of HTTP::Engine::Interface::ServerSimple
 Squatting on top of HTTP::Engine::Interface::FCGI
 
   # app_fastcgi.pl
+
+  #!/usr/bin/perl
+  use strict;
+  use warnings;
   use App 'On::HTTP::Engine';
+
   App->init;
   App->http_engine(
-    interface => 'FCGI',
-    args      => {
-      listen      => 9000,
-      nproc       => 2,
-      pidfile     => '/var/run/app-fastcgi.pid'
-      leave_umask => 1,
-      keep_stderr => 1,
-    }
+    interface => {
+      module => 'FCGI',
+      args   => {
+        leave_umask => 0,
+        keep_stderr => 1,
+        nointr      => 0,
+        detach      => 0,
+        manager     => 'FCGI::ProcManager',
+        nproc       => 4,
+        pidfile     => 'app.pid',
+        listen      => 'localhost:8000',
+      },
   )->run;
 
 Squatting on top of HTTP::Engine::Interface::ModPerl
@@ -131,7 +144,7 @@ using the ModPerl interface.  See the L</SYNOPSIS> for some examples.
 
 =head1 SEE ALSO
 
-L<HTTP::Engine>
+L<Squatting>, L<HTTP::Engine>, L<Mojo>
 
 =head1 AUTHOR
 
